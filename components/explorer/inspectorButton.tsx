@@ -44,7 +44,7 @@ export default function InspectorButton({
       inspectUrl = await getExplorerInspectorUrl(connection, result.transaction)
     } else {
       try {
-        const recentActivity = await connection.current.getConfirmedSignaturesForAddress2(
+        const recentActivity = await connection.current.getSignaturesForAddress(
           proposalInstruction.pubkey,
           {
             limit: 5,

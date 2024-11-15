@@ -24,7 +24,7 @@ async function getInfo(
   }
 
   return connection
-    .getConfirmedSignaturesForAddress2(
+    .getSignaturesForAddress(
       new PublicKey(address),
       {
         limit: 10,
