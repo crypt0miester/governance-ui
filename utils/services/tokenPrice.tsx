@@ -10,15 +10,13 @@ import { USDC_MINT } from '@blockworks-foundation/mango-v4'
 import { useLocalStorage } from '@hooks/useLocalStorage'
 import { getJupiterPricesByMintStrings } from '@hooks/queries/jupiterPrice'
 
-//this service provide prices it is not recommended to get anything more from here besides token name or price.
-//decimals from metadata can be different from the realm on chain one
-// const priceEndpoint = 'https://price.jup.ag/v4/price'
-const tokenListUrl = 'https://tokens.jup.ag/tokens?tags=verified'
+const tokenListUrl = 'https://tokens.jup.ag/tokens?tags=verified,lst'
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24 // 24 hours
+const PRICE_STORAGE_KEY = 'tokenPrices'
+const PRICE_CACHE_TTL_MS = 1000 * 60 * 5 // 5 minutes TTL
 
 export type TokenInfoWithoutDecimals = Omit<TokenInfo, 'decimals'>
 
-/** @deprecated */
 class TokenPriceService {
   _tokenList: TokenInfo[]
   _tokenPriceToUSDlist: {
@@ -31,6 +29,7 @@ class TokenPriceService {
     this._tokenPriceToUSDlist = {}
     this._unverifiedTokenCache = {}
   }
+
   async fetchSolanaTokenList() {
     try {
       const tokens = await axios.get(tokenListUrl)
@@ -63,9 +62,7 @@ class TokenPriceService {
     let tokenList: TokenInfo[] = []
 
     try {
-      // If the data is not in storage, or the TTL has expired
       if (!tokenListRaw || !ttl || Date.now() > Number(ttl)) {
-        // Fetch fresh data
         const response = await axios.get(tokenListUrl)
         const tokens = response.data as TokenInfo[]
 
@@ -80,12 +77,10 @@ class TokenPriceService {
             return token
           })
 
-          // Update cache and TTL
           storage.setItem('tokenList', JSON.stringify(tokenList))
           storage.setItem('tokenListTTL', String(Date.now() + CACHE_TTL_MS))
         }
       } else {
-        // Use cached data
         tokenList = JSON.parse(tokenListRaw)
       }
 
@@ -100,77 +95,164 @@ class TokenPriceService {
       return []
     }
   }
-
   async fetchTokenPrices(mintAddresses: string[]) {
-    if (mintAddresses.length) {
-      const tokenList = await this.fetchSolanaTokenListV2()
-      const symbolMap = Object.fromEntries(
-        tokenList.map((token) => [token.address, token.symbol])
+    if (!mintAddresses.length) return
+
+    const storage = useLocalStorage()
+
+    const cachedPricesData = storage.getItem(PRICE_STORAGE_KEY)
+    let cachedPrices = cachedPricesData
+      ? JSON.parse(cachedPricesData)
+      : {
+          prices: {},
+          ttl: '0',
+        }
+    const tokenList = await this.fetchSolanaTokenListV2()
+    const symbolMap = Object.fromEntries(
+      tokenList.map((token) => [token.address, token.symbol])
+    )
+
+    const mintAddressesWithSol = chunks([...mintAddresses, WSOL_MINT], 100)
+
+    for (const mintChunk of mintAddressesWithSol) {
+      const mintAddressesToProcess = mintChunk.filter(
+        (mint) => !this._tokenPriceToUSDlist[mint]
       )
 
-      //can query only 100 at once
-      const mintAddressesWithSol = chunks([...mintAddresses, WSOL_MINT], 100)
-      for (const mintChunk of mintAddressesWithSol) {
-        try {
-          const response = await getJupiterPricesByMintStrings(mintChunk)
-          const priceToUsd: Price[] = response
-            ? Object.entries(response).map(([address, data]) => ({
-                ...data,
-                mintSymbol: symbolMap[address] || 'Unknown',
-                vsToken: USDC_MINT.toBase58(),
-                vsTokenSymbol: 'USDC',
-              }))
-            : []
-
-          const keyValue = Object.fromEntries(
-            priceToUsd.map((val) => [val.id, val])
-          )
-
-          this._tokenPriceToUSDlist = {
-            ...this._tokenPriceToUSDlist,
-            ...keyValue,
+      if (mintAddressesToProcess.length > 0) {
+        const mintAddressesToFetch = mintAddressesToProcess.filter((mint) => {
+          if (
+            Date.now() < Number(cachedPrices.ttl) &&
+            cachedPrices.prices[mint]
+          ) {
+            this._tokenPriceToUSDlist[mint] = cachedPrices.prices[mint]
+            return false
           }
-        } catch (e) {
-          console.error(e)
-          notify({
-            type: 'error',
-            message: 'unable to fetch token prices',
-          })
-        }
-      }
+          return true
+        })
 
-      const USDC_MINT_BASE = USDC_MINT.toBase58()
-      if (!this._tokenPriceToUSDlist[USDC_MINT_BASE]) {
-        this._tokenPriceToUSDlist[USDC_MINT_BASE] = {
-          id: USDC_MINT_BASE,
-          mintSymbol: 'USDC',
-          price: 1,
-          vsToken: USDC_MINT_BASE,
-          vsTokenSymbol: 'USDC',
-        }
-      }
+        if (mintAddressesToFetch.length > 0) {
+          try {
+            const response = await getJupiterPricesByMintStrings(
+              mintAddressesToFetch
+            )
+            if (response) {
+              const priceToUsd: Price[] = Object.entries(response).map(
+                ([address, data]) => ({
+                  ...data,
+                  mintSymbol: symbolMap[address] || 'Unknown',
+                  vsToken: USDC_MINT.toBase58(),
+                  vsTokenSymbol: 'USDC',
+                })
+              )
 
-      //override chai price if its broken
-      const chaiMint = '3jsFX1tx2Z8ewmamiwSU851GzyzM2DJMq7KWW5DM8Py3'
-      const chaiData = this._tokenPriceToUSDlist[chaiMint]
+              priceToUsd.forEach((priceData) => {
+                this._tokenPriceToUSDlist[priceData.id] = priceData
 
-      if (chaiData?.price && (chaiData.price > 1.3 || chaiData.price < 0.9)) {
-        this._tokenPriceToUSDlist[chaiMint] = {
-          ...chaiData,
-          price: 1,
+                if (cachedPrices.prices[priceData.id]) {
+                  cachedPrices.prices[priceData.id] = priceData
+                } else {
+                  cachedPrices.prices = {
+                    ...cachedPrices.prices,
+                    [priceData.id]: priceData,
+                  }
+                }
+              })
+
+              cachedPrices.ttl = String(Date.now() + PRICE_CACHE_TTL_MS)
+
+              storage.setItem(PRICE_STORAGE_KEY, JSON.stringify(cachedPrices))
+            }
+          } catch (e) {
+            console.error(e)
+            notify({
+              type: 'error',
+              message: 'unable to fetch token prices',
+            })
+          }
         }
       }
     }
+
+    const USDC_MINT_BASE = USDC_MINT.toBase58()
+    if (!this._tokenPriceToUSDlist[USDC_MINT_BASE]) {
+      const usdcPrice: Price = {
+        id: USDC_MINT_BASE,
+        mintSymbol: 'USDC',
+        price: 1,
+        vsToken: USDC_MINT_BASE,
+        vsTokenSymbol: 'USDC',
+      }
+
+      this._tokenPriceToUSDlist[USDC_MINT_BASE] = usdcPrice
+      if (cachedPrices.prices) {
+        cachedPrices.prices[USDC_MINT_BASE] = usdcPrice
+      } else {
+        cachedPrices.prices = {
+          ...cachedPrices.prices,
+          [USDC_MINT_BASE]: usdcPrice,
+        }
+      }
+
+      storage.setItem(PRICE_STORAGE_KEY, JSON.stringify(cachedPrices))
+    }
+
+    const chaiMint = '3jsFX1tx2Z8ewmamiwSU851GzyzM2DJMq7KWW5DM8Py3'
+    const chaiData = this._tokenPriceToUSDlist[chaiMint]
+    if (chaiData?.price && (chaiData.price > 1.3 || chaiData.price < 0.9)) {
+      const updatedChaiData: Price = {
+        ...chaiData,
+        price: 1,
+      }
+      this._tokenPriceToUSDlist[chaiMint] = updatedChaiData
+      cachedPrices.prices[chaiMint] = updatedChaiData
+
+      storage.setItem(PRICE_STORAGE_KEY, JSON.stringify(cachedPrices))
+    }
   }
+
   async fetchTokenPrice(mintAddress: string): Promise<number | null> {
     try {
+      if (!mintAddress) return null
+      const storage = useLocalStorage()
+
       if (this._tokenPriceToUSDlist[mintAddress]) {
         return this._tokenPriceToUSDlist[mintAddress].price
+      }
+
+      let cachedPrices = {
+        prices: {},
+        ttl: '0',
+      }
+      const cachedPricesData = storage.getItem(PRICE_STORAGE_KEY)
+      cachedPrices = cachedPricesData ? JSON.parse(cachedPricesData) : null
+      if (
+        Date.now() < Number(cachedPrices.ttl) &&
+        cachedPrices.prices[mintAddress]
+      ) {
+        this._tokenPriceToUSDlist[mintAddress] =
+          cachedPrices.prices[mintAddress]
+        return cachedPrices.prices[mintAddress].price
       }
 
       const response = await getJupiterPricesByMintStrings([mintAddress])
 
       if (!response || !response[mintAddress]) {
+        if (cachedPrices.prices[mintAddress]) {
+          cachedPrices.prices[mintAddress] = {
+            price: 0,
+          }
+        } else {
+          cachedPrices.prices = {
+            ...cachedPrices.prices,
+            [mintAddress]: {
+              price: 0,
+            },
+          }
+        }
+        cachedPrices.ttl = String(Date.now() + PRICE_CACHE_TTL_MS)
+
+        storage.setItem(PRICE_STORAGE_KEY, JSON.stringify(cachedPrices))
         return null
       }
 
@@ -179,22 +261,38 @@ class TokenPriceService {
       if (!tokenInfo) {
         tokenInfo = (await this.getTokenInfoAsync(mintAddress)) || undefined
       }
-      this._tokenPriceToUSDlist[mintAddress] = {
+
+      const priceData: Price = {
         id: mintAddress,
         mintSymbol: tokenInfo?.symbol || 'Unknown',
         price: response[mintAddress].price,
         vsToken: USDC_MINT.toBase58(),
         vsTokenSymbol: 'USDC',
       }
-      return response[mintAddress].price
+
+      this._tokenPriceToUSDlist[mintAddress] = priceData
+      if (cachedPrices.prices[mintAddress]) {
+        cachedPrices.prices[mintAddress] = priceData
+      } else {
+        cachedPrices.prices = {
+          ...cachedPrices.prices,
+          [mintAddress]: priceData,
+        }
+      }
+
+      cachedPrices.ttl = String(Date.now() + PRICE_CACHE_TTL_MS)
+
+      storage.setItem(PRICE_STORAGE_KEY, JSON.stringify(cachedPrices))
+
+      return priceData.price
     } catch (e) {
       console.error('Error fetching token price:', e)
       return null
     }
   }
+
   /**
-   * @deprecated
-   * seriously do not use this. use fetchJupiterPrice
+   * Can be used but not recommended
    */
   getUSDTokenPrice(mintAddress: string): number {
     return mintAddress ? this._tokenPriceToUSDlist[mintAddress]?.price || 0 : 0
@@ -215,7 +313,7 @@ class TokenPriceService {
   ): Promise<TokenInfoWithoutDecimals | undefined> {
     let tokenInfo: TokenInfoWithoutDecimals | undefined =
       this._unverifiedTokenCache[mintAddress] || undefined
-      
+
     if (tokenInfo) {
       return tokenInfo
     }
@@ -249,7 +347,6 @@ class TokenPriceService {
         this._unverifiedTokenCache[mintAddress] = finalTokenInfo
         return finalTokenInfo
       } else {
-        console.error(`Metadata retrieving failed for ${mintAddress}`)
         return undefined
       }
     } catch {
