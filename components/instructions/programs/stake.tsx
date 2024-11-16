@@ -17,7 +17,12 @@ export const STAKE_INSTRUCTIONS = {
           BufferLayout.u32('instruction'),
           BufferLayout.ns64('lamports'),
         ]).decode(Buffer.from(_data))
-        const rent = await _connection.getMinimumBalanceForRentExemption(200)
+
+        // const rent = await _connection.getMinimumBalanceForRentExemption(200)
+        
+        // > solana rent 200 --lamports
+        // Rent-exempt minimum: 2282880 lamports
+        const rent = 2282880
         return (
           <>
             <p>

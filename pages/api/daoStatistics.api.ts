@@ -166,7 +166,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   console.log('fetching tokens and prices...')
   console.log('token count', tokenAmountMap.size)
 
-  await tokenPriceService.fetchSolanaTokenList()
+  // already called inside fetchTokenPrices()
+  // await tokenPriceService.fetchSolanaTokenListV2()
 
   for (const chunk of chunks([...tokenAmountMap.keys()], 50)) {
     await tokenPriceService.fetchTokenPrices(chunk)

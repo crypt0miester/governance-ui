@@ -546,10 +546,12 @@ const getSolAccountObj = async (
     }
   }
 
-  const minRentAmount = await connection.current.getMinimumBalanceForRentExemption(
-    0
-  )
-
+  // const minRentAmount = await connection.current.getMinimumBalanceForRentExemption(
+  //   0
+  // )
+  // > solana rent 0 --lamports
+  // Rent-exempt minimum: 890880 lamports
+  const minRentAmount = 890880
   const solAccount = acc as AccountInfoGen<Buffer | ParsedAccountData>
 
   solAccount.lamports =

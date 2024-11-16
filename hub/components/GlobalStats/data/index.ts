@@ -275,8 +275,8 @@ export async function fetchData(
 
   logger.log('fetching tokens and prices...');
   logger.log(`token count: ${tokenAmountMap.size}`);
-
-  await tokenPriceService.fetchSolanaTokenList();
+  // already called inside fetchTokenPrices()
+  // await tokenPriceService.fetchSolanaTokenListV2();
   const relevantTokens = Array.from(tokenAmountMap.keys()).filter(
     (key) => !!tokenAmountMap.get(key)?.isGreaterThan(1),
   );

@@ -105,7 +105,7 @@ export function AppContents(props: Props) {
   handleRouterHistory()
   useHandleGovernanceAssetsStore()
   useEffect(() => {
-    tokenPriceService.fetchSolanaTokenList()
+    tokenPriceService.fetchSolanaTokenListV2()
   }, [])
 
   const { getOwnedDeposits, resetDepositState } = useDepositStore()

@@ -67,7 +67,6 @@ export default function useTreasuryInfo(
     if (!loadingGovernedAccounts && accounts.length && getNftsAndDomains) {
       setDomainsLoading(true)
       setBuildingWallets(true)
-
       getDomains(
         accounts.filter((acc) => acc.isSol),
         connection.current
