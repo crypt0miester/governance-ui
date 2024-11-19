@@ -161,9 +161,8 @@ export class ComputeBudgetService {
       simulationError,
     } = await this.getSimulationUnitsTxn(transaction)
 
-    return { 
-      // 0 for now
-      microLamportsEstimate,
+    return {
+      microLamportsEstimate, // 0 for now
       // some instructions fail prior to executing previous ones
       // in that case we force it to be 500k for now
       computeUnits: computeUnits || 500_000,
