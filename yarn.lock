@@ -4724,6 +4724,11 @@
     "@solana/codecs-strings" "2.0.0-rc.1"
     "@solana/errors" "2.0.0-rc.1"
 
+"@solana/promises@2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@solana/promises/-/promises-2.0.0.tgz#81c8ee7c706ea4c46892022666da51bb9da921ef"
+  integrity sha512-4teQ52HDjK16ORrZe1zl+Q9WcZdQ+YEl0M1gk59XG7D0P9WqaVEQzeXGnKSCs+Y9bnB1u5xCJccwpUhHYWq6gg==
+
 "@solana/spl-account-compression@^0.1.4", "@solana/spl-account-compression@^0.1.8":
   version "0.1.9"
   resolved "https://registry.yarnpkg.com/@solana/spl-account-compression/-/spl-account-compression-0.1.9.tgz#5aeb5cd3416ca6e3a7257bec33e8c31f5ec52aaf"

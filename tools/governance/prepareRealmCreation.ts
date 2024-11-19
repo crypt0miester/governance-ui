@@ -170,6 +170,8 @@ export async function prepareRealmCreation({
   let communityMintPk = existingCommunityMintPk
 
   if (!communityMintPk) {
+    const tokenSeed = "joTKuzAaocHG3YvR"
+    const mintWithSeed = new PublicKey("DEWoRkGMAqXmJ2yGRQZsNnCBugkUixLpaAYZ4RFZTmDS")
     // Create community mint
     communityMintPk = await withCreateMint(
       connection,
@@ -178,9 +180,12 @@ export async function prepareRealmCreation({
       walletPk,
       null,
       communityMintDecimals,
-      walletPk
+      walletPk,
+      tokenSeed,
+      mintWithSeed
     )
   }
+  console.log('Prepare realm - community mint account', communityMintPk.toString())
 
   console.log('Prepare realm - council mint address', existingCouncilMintPk)
   // Create council mint
@@ -269,7 +274,7 @@ export async function prepareRealmCreation({
     communityTokenConfig,
     params._programVersion === 3 ? params.councilTokenConfig : undefined
   )
-
+  console.log("realmPk", realmPk.toString())
   const doesRealmExist = await connection.getAccountInfo(realmPk)
 
   if (doesRealmExist?.data) {
@@ -371,18 +376,19 @@ export async function prepareRealmCreation({
     votingCoolOffTime: VOTING_COOLOFF_TIME_DEFAULT,
     depositExemptProposalCount: 10,
   })
-
+  const customGovPubkey = new PublicKey("6Cr7Q6jtdrutWLUmrBDFLNXUyi4rZb7SjjCcMdTATmAY")
   const mainGovernancePk = await withCreateGovernance(
     realmInstructions,
     programIdPk,
     programVersion,
     realmPk,
-    undefined,
+    customGovPubkey,
     config,
     PublicKey.default,
     walletPk,
     walletPk
   )
+  console.log("mainGovernancePk", mainGovernancePk.toString())
 
   const nativeTreasuryAddress = await withCreateNativeTreasury(
     realmInstructions,
@@ -391,6 +397,7 @@ export async function prepareRealmCreation({
     mainGovernancePk,
     walletPk
   )
+  console.log("nativeTreasuryAddress", nativeTreasuryAddress.toString())
   if (transferCommunityMintAuthority) {
     const ix = Token.createSetAuthorityInstruction(
       TOKEN_PROGRAM_ID,

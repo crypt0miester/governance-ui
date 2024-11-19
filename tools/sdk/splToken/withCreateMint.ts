@@ -16,7 +16,9 @@ export const withCreateMint = async (
   ownerPk: PublicKey,
   freezeAuthorityPk: PublicKey | null,
   decimals: number,
-  payerPk: PublicKey
+  payerPk: PublicKey,
+  withSeed?: string,
+  mintWithSeed?: PublicKey,
 ) => {
   const mintRentExempt = await connection.getMinimumBalanceForRentExemption(
     MintLayout.span
@@ -24,25 +26,39 @@ export const withCreateMint = async (
 
   const mintAccount = new Keypair()
 
-  instructions.push(
-    SystemProgram.createAccount({
-      fromPubkey: payerPk,
-      newAccountPubkey: mintAccount.publicKey,
-      lamports: mintRentExempt,
-      space: MintLayout.span,
-      programId: TOKEN_PROGRAM_ID,
-    })
-  )
-  signers.push(mintAccount)
+  if (withSeed && mintWithSeed) {
+    instructions.push(
+      SystemProgram.createAccountWithSeed({
+        fromPubkey: payerPk,
+        newAccountPubkey: mintWithSeed,
+        basePubkey: payerPk,
+        seed: withSeed,
+        lamports: mintRentExempt,
+        space: MintLayout.span,
+        programId: TOKEN_PROGRAM_ID,
+      })
+    )
+  } else {
+    instructions.push(
+      SystemProgram.createAccount({
+        fromPubkey: payerPk,
+        newAccountPubkey: mintAccount.publicKey,
+        lamports: mintRentExempt,
+        space: MintLayout.span,
+        programId: TOKEN_PROGRAM_ID,
+      })
+    )
+    signers.push(mintAccount)   
+  }
 
   instructions.push(
     Token.createInitMintInstruction(
       TOKEN_PROGRAM_ID,
-      mintAccount.publicKey,
+      mintWithSeed ?? mintAccount.publicKey,
       decimals,
       ownerPk,
       freezeAuthorityPk
     )
   )
-  return mintAccount.publicKey
+  return mintWithSeed ?? mintAccount.publicKey
 }

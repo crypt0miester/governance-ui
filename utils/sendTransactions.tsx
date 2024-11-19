@@ -1,5 +1,5 @@
 import { SignerWalletAdapter } from '@solana/wallet-adapter-base'
-import { TransactionInstruction, Keypair } from '@solana/web3.js'
+import { TransactionInstruction, Keypair, PublicKey, VersionedTransaction, TransactionMessage } from '@solana/web3.js'
 import {
   closeTransactionProcessUi,
   incrementProcessedTransactions,
@@ -8,15 +8,11 @@ import {
 } from './transactionsLoader'
 
 import { invalidateInstructionAccounts } from '@hooks/queries/queryClient'
-import {
-  sendSignAndConfirmTransactionsProps,
-  sendSignAndConfirmTransactions,
-  TransactionInstructionWithType,
-} from '@blockworks-foundation/mangolana/lib/transactions'
 import { getFeeEstimate } from '@tools/feeEstimate'
 import { TransactionInstructionWithSigners } from '@blockworks-foundation/mangolana/lib/globalTypes'
 import { createComputeBudgetIx } from '@blockworks-foundation/mango-v4'
 import { BACKUP_CONNECTIONS } from './connection'
+import { sendSignAndConfirmTransactions, sendSignAndConfirmTransactionsProps, TransactionInstructionWithType } from './signAndSendV2'
 
 export type WalletSigner = Pick<
   SignerWalletAdapter,
@@ -125,8 +121,10 @@ export const sendTransactionsV3 = async ({
     maxRetries: 5,
     retried: 0,
     logFlowInfo: true,
+    useVersionedTransactions: true,
     ...config,
   }
+  
   return sendSignAndConfirmTransactions({
     connection,
     wallet,
@@ -138,6 +136,19 @@ export const sendTransactionsV3 = async ({
     backupConnections: BACKUP_CONNECTIONS, //TODO base this on connection confirmation level
     //lookupTableAccounts,
   })
+}
+
+function createTransaction(
+  payerKey: PublicKey,
+  instructions: TransactionInstruction[],
+): VersionedTransaction {
+  const messageV0 = new TransactionMessage({
+    payerKey,
+    recentBlockhash: PublicKey.default.toString(),
+    instructions,
+  }).compileToV0Message([]);
+
+  return new VersionedTransaction(messageV0);
 }
 
 const getErrorMsg = (e) => {
