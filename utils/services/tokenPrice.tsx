@@ -256,11 +256,7 @@ class TokenPriceService {
         return null
       }
 
-      let tokenInfo: TokenInfoWithoutDecimals | undefined =
-        this._unverifiedTokenCache[mintAddress] || undefined
-      if (!tokenInfo) {
-        tokenInfo = (await this.getTokenInfoAsync(mintAddress)) || undefined
-      }
+      let tokenInfo = (await this.getTokenInfoAsync(mintAddress)) || undefined
 
       const priceData: Price = {
         id: mintAddress,
@@ -331,28 +327,31 @@ class TokenPriceService {
     if (this._unverifiedTokenCache[mintAddress]) {
       return this._unverifiedTokenCache[mintAddress]
     }
-    // Get the token data from JUP's api
-    try {
-      const requestURL = `https://tokens.jup.ag/token/${mintAddress}`
-      const response = await axios.get(requestURL)
-      if (response.data) {
-        // Remove decimals and add chainId to match the TokenInfoWithoutDecimals struct
-        const { decimals, ...tokenInfoWithoutDecimals } = response.data
 
-        const finalTokenInfo = {
-          ...tokenInfoWithoutDecimals,
-          chainId: 101,
-        }
-        // Add to unverified token cache
-        this._unverifiedTokenCache[mintAddress] = finalTokenInfo
-        return finalTokenInfo
-      } else {
-        return undefined
-      }
-    } catch {
-      console.error(`Metadata retrieving failed for ${mintAddress}`)
-      return undefined
-    }
+    // logo not found so we return no data.
+    return undefined
+    // Get the token data from JUP's api
+    // try {
+    //   const requestURL = `https://tokens.jup.ag/token/${mintAddress}`
+    //   const response = await axios.get(requestURL)
+    //   if (response.data) {
+    //     // Remove decimals and add chainId to match the TokenInfoWithoutDecimals struct
+    //     const { decimals, ...tokenInfoWithoutDecimals } = response.data
+
+    //     const finalTokenInfo = {
+    //       ...tokenInfoWithoutDecimals,
+    //       chainId: 101,
+    //     }
+    //     // Add to unverified token cache
+    //     this._unverifiedTokenCache[mintAddress] = finalTokenInfo
+    //     return finalTokenInfo
+    //   } else {
+    //     return undefined
+    //   }
+    // } catch {
+    //   console.error(`Metadata retrieving failed for ${mintAddress}`)
+    //   return undefined
+    // }
   }
   catch(e) {
     console.error(e)

@@ -1,3 +1,4 @@
+
 import {
   Connection,
   LAMPORTS_PER_SOL,
@@ -10,7 +11,9 @@ import { groupBy, mapValues, maxBy, sampleSize } from 'lodash'
 export const getFeeEstimate = async (connection: Connection) => {
   const defaultFee = 50000
   try {
-    //Use mango client to find good fee
+    // when the chain is congested global fee has to be considered.
+    // Use mango client to find good fee
+    // lockWriteableAccounts should be accounts that are used in the transaction
     const MAINNET_MANGO_GROUP = new PublicKey(
       '78b8f4cGCwmZ9ysPFMWLaLTkkaYnUjwMJYStWe5RTSSX'
     )
@@ -35,13 +38,17 @@ export const getFeeEstimate = async (connection: Connection) => {
     const maxFeeBySlot = mapValues(groupBy(fees, 'slot'), (items) =>
       maxBy(items, 'prioritizationFee')
     )
-    const maximumFees = Object.values(maxFeeBySlot).sort(
+    const maxFeeBySlotNonZero = Object.values(maxFeeBySlot).filter((fee) => fee!.prioritizationFee > 0);
+    if (maxFeeBySlotNonZero.length < 1) return defaultFee
+    const maximumFees = Object.values(maxFeeBySlotNonZero).sort(
       (a, b) => a!.slot - b!.slot
     ) as RecentPrioritizationFees[]
+
 
     // get median of last 20 fees
     const recentFees = maximumFees.slice(Math.max(maximumFees.length - 20, 0))
     const mid = Math.floor(recentFees.length / 2)
+  
     const medianFee =
       recentFees.length % 2 !== 0
         ? recentFees[mid].prioritizationFee
@@ -50,6 +57,8 @@ export const getFeeEstimate = async (connection: Connection) => {
           2
     const feeEstimate = Math.ceil(medianFee * feeMultiplier)
 
+    // compute budget unit price is in micro lamports. 
+    // 0.001 * 10**9 is very small.
     return Math.min(feeEstimate, LAMPORTS_PER_SOL * 0.001)
   } catch (e) {
     return defaultFee

@@ -1,5 +1,5 @@
 import { SignerWalletAdapter } from '@solana/wallet-adapter-base'
-import { TransactionInstruction, Keypair } from '@solana/web3.js'
+import { TransactionInstruction, Keypair, ComputeBudgetProgram } from '@solana/web3.js'
 import {
   closeTransactionProcessUi,
   incrementProcessedTransactions,
@@ -17,6 +17,7 @@ import { getFeeEstimate } from '@tools/feeEstimate'
 import { TransactionInstructionWithSigners } from '@blockworks-foundation/mangolana/lib/globalTypes'
 import { createComputeBudgetIx } from '@blockworks-foundation/mango-v4'
 import { BACKUP_CONNECTIONS } from './connection'
+import { ComputeBudgetService } from './services/computeBudget'
 
 export type WalletSigner = Pick<
   SignerWalletAdapter,
@@ -47,22 +48,40 @@ export const sendTransactionsV3 = async ({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   lookupTableAccounts,
   autoFee = true,
+  dynamicComputeUnits = true
 }: sendSignAndConfirmTransactionsProps & {
   lookupTableAccounts?: any
   autoFee?: boolean
+  dynamicComputeUnits?: boolean
 }) => {
   const transactionInstructionsWithFee: TransactionInstructionWithType[] = []
   const fee = await getFeeEstimate(connection)
   for (const tx of transactionInstructions) {
     if (tx.instructionsSet.length) {
+      let newInstructionSet = tx.instructionsSet;
+      if (dynamicComputeUnits) {
+        const computeBudgetService = new ComputeBudgetService(connection)
+        const { computeUnits: units } = await computeBudgetService.getComputeUnitFees(
+          tx.instructionsSet.map((ixnSet) => ixnSet.transactionInstruction),
+          wallet.publicKey,
+        )
+        const computeBudgetUnitIxn = ComputeBudgetProgram.setComputeUnitLimit({units})
+        newInstructionSet = [
+          new TransactionInstructionWithSigners(computeBudgetUnitIxn),
+          ...tx.instructionsSet
+        ]
+      }
+
+      if (autoFee) {
+        newInstructionSet = [
+          new TransactionInstructionWithSigners(createComputeBudgetIx(fee)),
+          ...newInstructionSet
+        ]
+      }
+
       const txObjWithFee = {
         ...tx,
-        instructionsSet: autoFee
-          ? [
-              new TransactionInstructionWithSigners(createComputeBudgetIx(fee)),
-              ...tx.instructionsSet,
-            ]
-          : [...tx.instructionsSet],
+        instructionsSet: newInstructionSet
       }
       transactionInstructionsWithFee.push(txObjWithFee)
     }
@@ -134,7 +153,7 @@ export const sendTransactionsV3 = async ({
     timeoutStrategy,
     callbacks: callbacksWithUiComponent,
     config: cfg,
-    confirmLevel: 'confirmed',
+    confirmLevel: 'confirmed',  
     backupConnections: BACKUP_CONNECTIONS, //TODO base this on connection confirmation level
     //lookupTableAccounts,
   })
