@@ -48,30 +48,17 @@ export const sendTransactionsV3 = async ({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   lookupTableAccounts,
   autoFee = true,
-  dynamicComputeUnits = true
+  // dynamicComputeUnits = true
 }: sendSignAndConfirmTransactionsProps & {
   lookupTableAccounts?: any
   autoFee?: boolean
-  dynamicComputeUnits?: boolean
+  // dynamicComputeUnits?: boolean
 }) => {
   const transactionInstructionsWithFee: TransactionInstructionWithType[] = []
   const fee = await getFeeEstimate(connection)
   for (const tx of transactionInstructions) {
     if (tx.instructionsSet.length) {
       let newInstructionSet = tx.instructionsSet;
-      if (dynamicComputeUnits) {
-        const computeBudgetService = new ComputeBudgetService(connection)
-        const { computeUnits: units } = await computeBudgetService.getComputeUnitFees(
-          tx.instructionsSet.map((ixnSet) => ixnSet.transactionInstruction),
-          wallet.publicKey,
-        )
-        const computeBudgetUnitIxn = ComputeBudgetProgram.setComputeUnitLimit({units})
-        newInstructionSet = [
-          new TransactionInstructionWithSigners(computeBudgetUnitIxn),
-          ...tx.instructionsSet
-        ]
-      }
-
       if (autoFee) {
         newInstructionSet = [
           new TransactionInstructionWithSigners(createComputeBudgetIx(fee)),

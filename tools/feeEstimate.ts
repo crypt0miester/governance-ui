@@ -38,9 +38,7 @@ export const getFeeEstimate = async (connection: Connection) => {
     const maxFeeBySlot = mapValues(groupBy(fees, 'slot'), (items) =>
       maxBy(items, 'prioritizationFee')
     )
-    const maxFeeBySlotNonZero = Object.values(maxFeeBySlot).filter((fee) => fee!.prioritizationFee > 0);
-    if (maxFeeBySlotNonZero.length < 1) return defaultFee
-    const maximumFees = Object.values(maxFeeBySlotNonZero).sort(
+    const maximumFees = Object.values(maxFeeBySlot).sort(
       (a, b) => a!.slot - b!.slot
     ) as RecentPrioritizationFees[]
 
