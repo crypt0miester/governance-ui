@@ -9,7 +9,7 @@ import {
   getMintMinAmountAsDecimal,
   getMintNaturalAmountFromDecimalAsBN,
 } from '@tools/sdk/units'
-import { tryParseKey } from '@tools/validators/pubkey'
+import { tryParseDomain, tryParseKey } from '@tools/validators/pubkey'
 import { debounce } from '@utils/debounce'
 import { precision } from '@utils/formatting'
 import { TokenProgramAccount, tryGetTokenAccount } from '@utils/tokens'
@@ -49,6 +49,7 @@ import { fetchJupiterPrice } from '@hooks/queries/jupiterPrice'
 import {useVoteByCouncilToggle} from "@hooks/useVoteByCouncilToggle";
 import { AddAlt } from '@carbon/icons-react'
 import { StyledLabel } from '@components/inputs/styles'
+import { splitDomainTld, TldParser } from '@onsol/tldparser'
 
 const SendTokens = () => {
   const currentAccount = useTreasuryAccountStore((s) => s.currentAccount)
@@ -80,6 +81,9 @@ const SendTokens = () => {
     setDestinationAccount,
   ] = useState<(TokenProgramAccount<AccountInfo> | null)[]>([null])
 
+  // used in UI
+  const [domains, setDomains] = useState<(string | null)[]>([null])
+  const [base58DestinationAddresses, setBase58DestinationAddresses] = useState<(string | null)[]>([null])
   const [isLoading, setIsLoading] = useState(false)
   const [formErrors, setFormErrors] = useState({})
   const destinationAccountName = destinationAccount.map(acc => (
@@ -279,10 +283,53 @@ const SendTokens = () => {
     })
 
     const currentAccounts = [...destinationAccount]
+    // used in the UI
+    let pubKey: PublicKey | null = null
+    const currentDomains = [...domains]
+    const currentBase58Addresses = [...base58DestinationAddresses]
 
     debounce.debounceFcn(async () => {
-      const pubKey = tryParseKey(address)
+      if (address.length >= 4 && address.split(".").length === 2) {
+        const [tld] = splitDomainTld(address);
+        if (tld === '.sol') {
+          pubKey = await tryParseDomain(address)
+          // used in the UI
+          currentDomains[idx] = address
+          currentBase58Addresses[idx] = pubKey ? pubKey.toString() : null
+          setDomains(currentDomains)
+          setBase58DestinationAddresses(currentBase58Addresses)
+        }  else {
+          const parser = new TldParser(connection.current)
+          try {
+            const owner = await parser.getOwnerFromDomainTld(address)
+            pubKey = owner ?? null;
+            currentDomains[idx] = address
+            currentBase58Addresses[idx] = pubKey ? pubKey.toString() : null
+            setDomains(currentDomains)
+            setBase58DestinationAddresses(currentBase58Addresses)
+          } catch (error) {
+            console.warn('Error resolving domain:', error)
+            pubKey = null
+            currentDomains[idx] = address
+            currentBase58Addresses[idx] = null
+            setDomains(currentDomains)
+            setBase58DestinationAddresses(currentBase58Addresses)
+          }
+        }
+      } else {
+        pubKey = tryParseKey(address)
+        currentDomains[idx] = null
+        currentBase58Addresses[idx] = pubKey ? pubKey.toString() : null
+        setDomains(currentDomains)
+        setBase58DestinationAddresses(currentBase58Addresses)
+      }
       if (pubKey) {
+        newAddresses[idx] = pubKey.toString()
+        // set the correct address again.
+        handleSetForm({
+          value: newAddresses,
+          propertyName: 'destinationAccount',
+        })
         const account = await tryGetTokenAccount(connection.current, pubKey)
         currentAccounts[idx] = account ? account : null
         setDestinationAccount(currentAccounts)
@@ -314,6 +361,14 @@ const SendTokens = () => {
                 formErrors['destinationAccount'][idx] : ""
               }
             />
+            {base58DestinationAddresses[idx] && (
+              <div>
+                <div className="pb-0.5 text-fgd-3 text-xs">{domains[idx]}</div>
+                <div className="text-xs break-all">
+                  {base58DestinationAddresses[idx]?.toString()}
+                </div>
+              </div>
+            )}
             {destinationAccount[idx] && (
               <div>
                 <div className="pb-0.5 text-fgd-3 text-xs">Account owner</div>

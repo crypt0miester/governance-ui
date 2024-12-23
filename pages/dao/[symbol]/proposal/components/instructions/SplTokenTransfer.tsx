@@ -146,7 +146,8 @@ const SplTokenTransfer = ({
   const destinationAccountName =
     destinationAccount?.publicKey &&
     getAccountName(destinationAccount?.account.address)
-  const base58DestinationAddress = address.endsWith('.sol')
+  let isDomain = address.length >= 4 && address.split(".").length === 2
+  const base58DestinationAddress = isDomain
     ? form.destinationAccount
     : undefined
   const schema = getTokenTransferSchema({ form, connection })

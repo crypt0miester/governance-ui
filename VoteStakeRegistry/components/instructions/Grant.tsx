@@ -9,7 +9,7 @@ import {
 } from '@tools/sdk/units'
 import { PublicKey, TransactionInstruction } from '@solana/web3.js'
 import { precision } from '@utils/formatting'
-import { tryParseKey } from '@tools/validators/pubkey'
+import { tryParseDomain, tryParseKey } from '@tools/validators/pubkey'
 import { TokenProgramAccount, tryGetTokenAccount } from '@utils/tokens'
 import { GrantForm, UiInstruction } from '@utils/uiTypes/proposalCreationTypes'
 import { getAccountName } from '@components/instructions/tools'
@@ -44,6 +44,8 @@ import asFindable from '@utils/queries/asFindable'
 import { tokenOwnerRecordQueryKeys } from '@hooks/queries/tokenOwnerRecord'
 import useLegacyConnectionContext from '@hooks/useLegacyConnectionContext'
 import {useVsrClient} from "../../../VoterWeightPlugins/useVsrClient";
+import { splitDomainTld, TldParser } from '@onsol/tldparser'
+import { useDestination } from '@hooks/useDestination'
 
 const Grant = ({
   index,
@@ -75,6 +77,12 @@ const Grant = ({
     allowClawback: true,
     lockupKind: lockupTypes[0],
   })
+  // unify the code from spl token transfer
+  const [address, setAddress] = useState('')
+  const { destinationAccount, destinationAddress } = useDestination(
+    connection.current,
+    address
+  )
   const schema = useMemo(
     () =>
       getTokenTransferSchema({ form, connection, ignoreAmount: true }).concat(
@@ -95,10 +103,6 @@ const Grant = ({
   const [governedAccount, setGovernedAccount] = useState<
     ProgramAccount<Governance> | undefined
   >(undefined)
-  const [
-    destinationAccount,
-    setDestinationAccount,
-  ] = useState<TokenProgramAccount<AccountInfo> | null>(null)
   const [formErrors, setFormErrors] = useState({})
   const mintMinAmount = form.mintInfo
     ? getMintMinAmountAsDecimal(form.mintInfo)
@@ -253,21 +257,6 @@ const Grant = ({
     }
   }, [startDate, endDate, form.lockupKind.value])
 
-  useEffect(() => {
-    if (form.destinationAccount) {
-      debounce.debounceFcn(async () => {
-        const pubKey = tryParseKey(form.destinationAccount)
-        if (pubKey) {
-          const account = await tryGetTokenAccount(connection.current, pubKey)
-          setDestinationAccount(account ? account : null)
-        } else {
-          setDestinationAccount(null)
-        }
-      })
-    } else {
-      setDestinationAccount(null)
-    }
-  }, [form.destinationAccount, connection])
 
   useEffect(() => {
     handleSetInstructions(
@@ -305,8 +294,30 @@ const Grant = ({
     }
   }, [vsrClient, realm])
 
+  // unify the code from spl token transfer
+  useEffect(() => {
+    if (destinationAddress) {
+      handleSetForm({
+        value: destinationAddress.toBase58(),
+        propertyName: 'destinationAccount',
+      })
+    } else {
+      handleSetForm({
+        value: '',
+        propertyName: 'destinationAccount',
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO please fix, it can cause difficult bugs. You might wanna check out https://bobbyhadz.com/blog/react-hooks-exhaustive-deps for info. -@asktree
+  }, [destinationAddress])
+
   const isNotVested =
     form.lockupKind.value !== 'monthly' && form.lockupKind.value !== 'daily'
+ 
+  
+    let isDomain = address.length >= 4 && address.split(".").length === 2
+    const base58DestinationAddress = isDomain
+      ? form.destinationAccount
+      : undefined
   return (
     <>
       <Select
@@ -416,16 +427,17 @@ const Grant = ({
       )}
       <Input
         label="Wallet address"
-        value={form.destinationAccount}
+        value={address}
         type="text"
-        onChange={(evt) =>
-          handleSetForm({
-            value: evt.target.value,
-            propertyName: 'destinationAccount',
-          })
-        }
+        onChange={(evt) => setAddress(evt.target.value)}
         error={formErrors['destinationAccount']}
       />
+      {base58DestinationAddress && (
+        <div>
+          <div className="pb-0.5 text-fgd-3 text-xs">{address}</div>
+          <div className="text-xs">{base58DestinationAddress}</div>
+        </div>
+      )}
       {destinationAccount && (
         <div>
           <div className="pb-0.5 text-fgd-3 text-xs">Account owner</div>
