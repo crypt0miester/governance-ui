@@ -94,7 +94,7 @@
     "@radix-ui/react-toolbar": "1.0.0",
     "@radix-ui/react-tooltip": "1.0.0",
     "@raydium-io/raydium-sdk-v2": "0.1.127-alpha",
-    "@realms-today/spl-governance": "0.3.30",
+    "@realms-today/spl-governance": "github:crypt0miester/oyster#packaged",
     "@sentry/nextjs": "7.81.1",
     "@solana-mobile/wallet-adapter-mobile": "2.0.0",
     "@solana/buffer-layout": "4.0.0",

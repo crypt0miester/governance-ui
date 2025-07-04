@@ -21,6 +21,12 @@ config = withTM({
       test: /\.svg$/,
       use: ['@svgr/webpack'],
     })
+    if (!isServer) {
+      config.resolve.alias = {
+        ...(config.resolve.alias || {}),
+        'node:assert': require.resolve('assert'),
+      };
+    }
     if (!isServer) config.resolve.fallback.fs = false
     return config
   },

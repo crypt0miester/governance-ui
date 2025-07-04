@@ -11,9 +11,11 @@ import {
   withInsertTransaction,
   InstructionData,
   withSignOffProposal,
-  withAddSignatory,
   MultiChoiceType,
-} from '@solana/spl-governance'
+  AddSignatoryArgs,
+  getGovernanceInstructionSchema,
+  withAddSignatory,
+} from '@realms-today/spl-governance'
 import { withCreateProposal } from '@realms-today/spl-governance'
 import {
   sendTransactionsV3,
@@ -27,6 +29,8 @@ import { trySentryLog } from '@utils/logs'
 import { deduplicateObjsFilter } from '@utils/instructionTools'
 import { NftVoterClient } from '@utils/uiTypes/NftVoterClient'
 import { fetchProgramVersion } from '@hooks/queries/useProgramVersionQuery'
+import { SYSTEM_PROGRAM_ID } from '@solana/spl-governance'
+import { serialize } from "borsh";
 
 export interface InstructionDataWithHoldUpTime {
   data: InstructionData | null
@@ -89,6 +93,7 @@ export const createProposal = async (
 
   // Changed this because it is misbehaving on my local validator setup.
   const programVersion = await fetchProgramVersion(connection, programId)
+  console.log("PROGRAM VERSION", programVersion)
 
   // V2 Approve/Deny configuration
   const isMulti = options.length > 1
@@ -157,23 +162,18 @@ export const createProposal = async (
     plugin?.voterWeightPk,
     proposalSeed,
   )
+  console.log("governance", governance.toString())
 
-  await withAddSignatory(
+  const signatoryRecordAddress = await withAddSignatory(
     instructions,
     programId,
+    governance,
     programVersion,
     proposalAddress,
     tokenOwnerRecord.pubkey,
     governanceAuthority,
     signatory,
     payer,
-  )
-
-  // TODO: Return signatoryRecordAddress from the SDK call
-  const signatoryRecordAddress = await getSignatoryRecordAddress(
-    programId,
-    proposalAddress,
-    signatory,
   )
 
   const insertInstructions: TransactionInstruction[] = []

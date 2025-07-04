@@ -64,7 +64,7 @@ export const createLUTProposal = async (
 
   // Changed this because it is misbehaving on my local validator setup.
   const programVersion = await fetchProgramVersion(connection, programId)
-
+  console.log("PROGRAM VERSION", programVersion)
   // V2 Approve/Deny configuration
   const voteType = VoteType.SINGLE_CHOICE
   const useDenyOption = true

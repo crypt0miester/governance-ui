@@ -49,6 +49,7 @@ export const createBase64Proposal = async (
     governanceProgram,
   )
 
+  console.log("PROGRAM VERSION", programVersion)
   // V2 Approve/Deny configuration
   const voteType = VoteType.SINGLE_CHOICE
   const options = ['Approve']

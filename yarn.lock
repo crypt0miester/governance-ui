@@ -4924,17 +4924,15 @@
     "@react-spring/shared" "~9.7.5"
     "@react-spring/types" "~9.7.5"
 
-"@realms-today/spl-governance@0.3.30":
-  version "0.3.30"
-  resolved "https://registry.yarnpkg.com/@realms-today/spl-governance/-/spl-governance-0.3.30.tgz#b2cb00f311a11892729928e064a017cb7fca6f18"
-  integrity sha512-lIuynSO8/zYrSs6IkPImXBzANH3h9TmxmSLJSlyqNtfrPpHqshlGCdrop1FxvqSXX4yHeEe75V+K3E2mhIOHpg==
+"@realms-today/spl-governance@github:crypt0miester/oyster#packaged":
+  version "0.4.0"
+  resolved "https://codeload.github.com/crypt0miester/oyster/tar.gz/fb1d555bb26df2ab0cbc593bafe509d4e3ec6e7d"
   dependencies:
-    "@solana/web3.js" "^1.22.0"
-    axios "^1.1.3"
+    "@solana/web3.js" "=1.98.0"
     bignumber.js "^9.0.1"
     bn.js "^5.1.3"
-    borsh "^0.3.1"
-    bs58 "^4.0.1"
+    borsh "^0.7.0"
+    bs58 "^5.0.0"
     superstruct "^0.15.2"
 
 "@rollup/plugin-commonjs@24.0.0":
@@ -6915,7 +6913,7 @@
     "@solana/wallet-standard-core" "^1.1.2"
     "@solana/wallet-standard-wallet-adapter" "^1.1.4"
 
-"@solana/web3.js@1.56.0", "@solana/web3.js@1.78.8", "@solana/web3.js@=1.92.3", "@solana/web3.js@^1.17.0", "@solana/web3.js@^1.21.0", "@solana/web3.js@^1.22.0", "@solana/web3.js@^1.30.2", "@solana/web3.js@^1.31.0", "@solana/web3.js@^1.32.0", "@solana/web3.js@^1.35.1", "@solana/web3.js@^1.36.0", "@solana/web3.js@^1.43.4", "@solana/web3.js@^1.44.0", "@solana/web3.js@^1.44.3", "@solana/web3.js@^1.50.1", "@solana/web3.js@^1.53.0", "@solana/web3.js@^1.56.2", "@solana/web3.js@^1.59.1", "@solana/web3.js@^1.63.0", "@solana/web3.js@^1.63.1", "@solana/web3.js@^1.66.2", "@solana/web3.js@^1.68.0", "@solana/web3.js@^1.70.3", "@solana/web3.js@^1.73.0", "@solana/web3.js@^1.73.2", "@solana/web3.js@^1.77.3", "@solana/web3.js@^1.87.5", "@solana/web3.js@^1.87.6", "@solana/web3.js@^1.89.1", "@solana/web3.js@^1.90.0", "@solana/web3.js@^1.91.8", "@solana/web3.js@^1.95.1", "@solana/web3.js@^1.95.2", "@solana/web3.js@^1.95.3", "@solana/web3.js@^1.95.8", "@solana/web3.js@~1.77.3":
+"@solana/web3.js@1.56.0", "@solana/web3.js@1.78.8", "@solana/web3.js@=1.92.3", "@solana/web3.js@=1.98.0", "@solana/web3.js@^1.17.0", "@solana/web3.js@^1.21.0", "@solana/web3.js@^1.22.0", "@solana/web3.js@^1.30.2", "@solana/web3.js@^1.31.0", "@solana/web3.js@^1.32.0", "@solana/web3.js@^1.35.1", "@solana/web3.js@^1.36.0", "@solana/web3.js@^1.43.4", "@solana/web3.js@^1.44.0", "@solana/web3.js@^1.44.3", "@solana/web3.js@^1.50.1", "@solana/web3.js@^1.53.0", "@solana/web3.js@^1.56.2", "@solana/web3.js@^1.59.1", "@solana/web3.js@^1.63.0", "@solana/web3.js@^1.63.1", "@solana/web3.js@^1.66.2", "@solana/web3.js@^1.68.0", "@solana/web3.js@^1.70.3", "@solana/web3.js@^1.73.0", "@solana/web3.js@^1.73.2", "@solana/web3.js@^1.77.3", "@solana/web3.js@^1.87.5", "@solana/web3.js@^1.87.6", "@solana/web3.js@^1.89.1", "@solana/web3.js@^1.90.0", "@solana/web3.js@^1.91.8", "@solana/web3.js@^1.95.1", "@solana/web3.js@^1.95.2", "@solana/web3.js@^1.95.3", "@solana/web3.js@^1.95.8", "@solana/web3.js@~1.77.3":
   version "1.78.8"
   resolved "https://registry.yarnpkg.com/@solana/web3.js/-/web3.js-1.78.8.tgz#d635bcccaac9e36270c6b16340bfeb5502737831"
   integrity sha512-y6kMa0ohRjamBGtxIGX4TkdAzL8Cs2bzM4JDPCyYLFPdo7kWk0Cx+BkbhX8hEV4IfvCONF92KIniV7hDvHuq8A==
