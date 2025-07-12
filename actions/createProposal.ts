@@ -14,7 +14,6 @@ import {
   MultiChoiceType,
   AddSignatoryArgs,
   getGovernanceInstructionSchema,
-  withAddSignatory,
 } from '@realms-today/spl-governance'
 import { withCreateProposal } from '@realms-today/spl-governance'
 import {
@@ -167,8 +166,8 @@ export const createProposal = async (
   const signatoryRecordAddress = await withAddSignatory(
     instructions,
     programId,
-    governance,
     programVersion,
+    governance,
     proposalAddress,
     tokenOwnerRecord.pubkey,
     governanceAuthority,
@@ -336,3 +335,68 @@ export const createProposal = async (
   })
   return proposalAddress
 }
+
+export const withAddSignatory = async (
+	instructions: TransactionInstruction[],
+	programId: PublicKey,
+	programVersion: number,
+  governance: PublicKey,
+	proposal: PublicKey,
+	tokenOwnerRecord: PublicKey,
+	governanceAuthority: PublicKey,
+	signatory: PublicKey,
+	payer: PublicKey,
+) => {
+	const args = new AddSignatoryArgs({ signatory });
+	const data = Buffer.from(serialize(getGovernanceInstructionSchema(programVersion), args));
+
+	const signatoryRecordAddress = await getSignatoryRecordAddress(programId, proposal, signatory);
+
+	const keys = [
+		{
+			pubkey: governance,
+			isWritable: true,
+			isSigner: false,
+		},
+		{
+			pubkey: proposal,
+			isWritable: true,
+			isSigner: false,
+		},
+		{
+			pubkey: signatoryRecordAddress,
+			isWritable: true,
+			isSigner: false,
+		},
+		{
+			pubkey: payer,
+			isWritable: true,
+			isSigner: true,
+		},
+		{
+			pubkey: SYSTEM_PROGRAM_ID,
+			isSigner: false,
+			isWritable: false,
+		},
+		{
+			pubkey: tokenOwnerRecord,
+			isWritable: false,
+			isSigner: false,
+		},
+		{
+			pubkey: governanceAuthority,
+			isWritable: false,
+			isSigner: true,
+		},
+	];
+
+	instructions.push(
+		new TransactionInstruction({
+			keys,
+			programId,
+			data,
+		}),
+	);
+
+	return signatoryRecordAddress;
+};
