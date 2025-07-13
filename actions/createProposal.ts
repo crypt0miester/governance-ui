@@ -1,4 +1,4 @@
-import { Keypair, PublicKey, TransactionInstruction } from '@solana/web3.js'
+import { Keypair, PublicKey, SYSVAR_RENT_PUBKEY, TransactionInstruction } from '@solana/web3.js'
 import {
   getInstructionDataFromBase64,
   Governance,
@@ -8,7 +8,6 @@ import {
   VoteType,
   getSignatoryRecordAddress,
   RpcContext,
-  withInsertTransaction,
   InstructionData,
   withSignOffProposal,
   MultiChoiceType,
@@ -28,7 +27,7 @@ import { trySentryLog } from '@utils/logs'
 import { deduplicateObjsFilter } from '@utils/instructionTools'
 import { NftVoterClient } from '@utils/uiTypes/NftVoterClient'
 import { fetchProgramVersion } from '@hooks/queries/useProgramVersionQuery'
-import { SYSTEM_PROGRAM_ID } from '@solana/spl-governance'
+import { getProposalTransactionAddress, SYSTEM_PROGRAM_ID, withInsertTransaction } from '@solana/spl-governance'
 import { serialize } from "borsh";
 
 export interface InstructionDataWithHoldUpTime {
@@ -82,6 +81,7 @@ export const createProposal = async (
   const governanceAuthority = walletPubkey
   const signatory = walletPubkey
   const payer = walletPubkey
+  console.log("walletPubkey", walletPubkey.toString())
   const prerequisiteInstructions: TransactionInstruction[] = []
   const prerequisiteInstructionsSigners: (Keypair | null)[] = []
   // sum up signers
@@ -161,7 +161,6 @@ export const createProposal = async (
     plugin?.voterWeightPk,
     proposalSeed,
   )
-  console.log("governance", governance.toString())
 
   const signatoryRecordAddress = await withAddSignatory(
     instructions,
@@ -174,7 +173,6 @@ export const createProposal = async (
     signatory,
     payer,
   )
-
   const insertInstructions: TransactionInstruction[] = []
 
   const chunkBys = instructionsData

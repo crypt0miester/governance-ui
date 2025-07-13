@@ -4926,7 +4926,7 @@
 
 "@realms-today/spl-governance@github:crypt0miester/oyster#packaged":
   version "0.4.0"
-  resolved "https://codeload.github.com/crypt0miester/oyster/tar.gz/fb1d555bb26df2ab0cbc593bafe509d4e3ec6e7d"
+  resolved "https://codeload.github.com/crypt0miester/oyster/tar.gz/8eb5b6c0c58cf89f41401d8dc514ffbacd3d1b08"
   dependencies:
     "@solana/web3.js" "=1.98.0"
     bignumber.js "^9.0.1"
